@@ -1,0 +1,789 @@
+﻿<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>درس × لعبة - القوى الكهربية والمغناطيسية</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@400;700;800&display=swap');
+        body { font-family: 'Tajawal', sans-serif; background-color: #f0fdfa; user-select: none; overflow-x: hidden; }
+        .glass-panel { background: rgba(255, 255, 255, 0.9); backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.2); box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.1); }
+        .btn-bounce { transition: transform 0.2s; }
+        .btn-bounce:active { transform: scale(0.95); }
+        
+        /* Matching Game Styles */
+        .match-item { transition: all 0.3s; }
+        .match-item.selected { background-color: #fef08a; border-color: #eab308; transform: scale(1.05); }
+        .match-item.matched { background-color: #86efac; border-color: #22c55e; opacity: 0.7; pointer-events: none; }
+        .match-item.error { background-color: #fca5a5; border-color: #ef4444; animation: shake 0.5s; }
+        .match-item.timeout-error { background-color: #fecaca; border-color: #ef4444; opacity: 0.6; pointer-events: none; }
+        
+        /* Bubbles Style */
+        .game-bubble {
+            border-radius: 50%;
+            background: radial-gradient(circle at 30% 30%, rgba(255, 255, 255, 0.9), rgba(186, 230, 253, 0.7) 60%, rgba(56, 189, 248, 0.4));
+            box-shadow: inset 0 0 15px rgba(255,255,255,0.8), 0 4px 10px rgba(0,0,0,0.15);
+            border: 1px solid rgba(255,255,255,0.6);
+            backdrop-filter: blur(4px);
+            color: #0c4a6e;
+            text-shadow: 0 1px 2px rgba(255,255,255,0.8);
+        }
+
+        /* Targets Style */
+        .horizontal-target {
+            background-color: white;
+            border: 4px solid;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.2), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        }
+
+        /* Robust CSS Animations */
+        @keyframes fallDown { from { top: -150px; } to { top: 120%; } }
+        @keyframes moveRight { from { left: -150px; } to { left: 120%; } }
+        @keyframes moveLeft { from { left: 100%; } to { left: -150px; } }
+        
+        .anim-fall { animation: fallDown 40s linear forwards; }
+        .anim-right { animation: moveRight 35s linear forwards; }
+        .anim-left { animation: moveLeft 35s linear forwards; }
+
+        @keyframes shake { 0%, 100% {transform: translateX(0);} 25% {transform: translateX(-5px);} 75% {transform: translateX(5px);} }
+        .popup-anim { animation: popIn 0.3s ease-out forwards; }
+        @keyframes popIn { 0% { opacity: 0; transform: scale(0.5); } 100% { opacity: 1; transform: scale(1); } }
+    </style>
+</head>
+<body class="text-gray-800 min-h-screen pb-20 relative">
+
+    <!-- GLOBAL FIXED HEADER (Safe top bar for logo) -->
+    <header class="fixed top-0 w-full bg-white/95 backdrop-blur-md shadow-sm z-50 h-20 flex items-center px-4 md:px-8 border-b border-teal-100 transition-all">
+        <img src="logo.jpeg" alt="Logo" class="w-14 h-14 md:w-16 md:h-16 rounded-xl shadow-sm object-cover border border-teal-200 bg-white" onerror="this.src='data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMDAgMTAwIj48cmVjdCB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgZmlsbD0iI2YxZjVmOSIvPjx0ZXh0IHg9IjUwIiB5PSI1MCIgZm9udC1mYW1pbHk9IkFyaWFsIiBmb250LXNpemU9IjIwIiBmaWxsPSIjOTRjM2Q4IiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBkeT0iLjMiPkxvZ288L3RleHQ+PC9zdmc+'; this.onerror=null;">
+        <h1 class="mr-4 font-extrabold text-teal-800 text-lg md:text-2xl drop-shadow-sm">درس × لعبة</h1>
+    </header>
+
+    <!-- Main Container (Pushed down to avoid overlap with fixed header) -->
+    <div class="max-w-4xl mx-auto p-4 relative pt-28" id="main-container">
+        
+        <!-- Main Dashboard Screen -->
+        <div id="screen-home" class="space-y-6">
+            <!-- Header Section -->
+            <div class="glass-panel rounded-2xl p-6 shadow-lg relative overflow-hidden flex flex-col md:flex-row items-center gap-6 mt-4">
+                <div class="absolute -top-10 -right-10 w-32 h-32 bg-teal-200 rounded-full opacity-50 blur-xl"></div>
+                <div class="absolute -bottom-10 -left-10 w-32 h-32 bg-blue-200 rounded-full opacity-50 blur-xl"></div>
+                
+                <div class="w-full md:w-1/2 text-center md:text-right z-10 flex flex-col justify-center">
+                    <h2 class="text-2xl md:text-3xl font-bold text-gray-700 mb-2">الصف الثالث الإعدادي - الترم الأول</h2>
+                    <h3 class="text-xl md:text-2xl text-teal-600 font-extrabold mb-4">درس: القوى الكهربية والمغناطيسية</h3>
+                    
+                    <div class="mt-4 border-t border-teal-100 pt-4">
+                        <p class="text-sm text-gray-500 font-bold">مع الأستاذ</p>
+                        <p class="text-2xl font-bold text-teal-800">حبيب بُشرى</p>
+                    </div>
+                </div>
+
+                <div class="w-full md:w-1/2 z-10 flex justify-center md:justify-end">
+                    <img src="pic.jpeg" alt="صورة المعلم" class="w-48 h-48 sm:w-64 sm:h-64 md:w-full md:max-w-[300px] aspect-square rounded-2xl border-4 border-teal-400 shadow-xl object-cover bg-teal-50" onerror="this.src='data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMDAgMTAwIj48cmVjdCB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgZmlsbD0iI2YxZjVmOSIvPjx0ZXh0IHg9IjUwIiB5PSI1MCIgZm9udC1mYW1pbHk9IkFyaWFsIiBmb250LXNpemU9IjIwIiBmaWxsPSIjOTRjM2Q4IiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBkeT0iLjMiPkxvZ288L3RleHQ+PC9zdmc+'; this.onerror=null;">
+                </div>
+            </div>
+
+            <h3 class="text-center font-bold text-gray-600 mt-8 mb-4">اختر اللعبة لتبدأ التحدي</h3>
+            
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                <!-- 1. MCQ -->
+                <button onclick="startGame('mcq')" class="btn-bounce bg-gradient-to-r from-blue-500 to-blue-600 text-white p-4 rounded-xl shadow-md flex items-center justify-between">
+                    <div class="text-right">
+                        <h4 class="font-bold text-lg">الاختيار من متعدد</h4>
+                        <p class="text-xs text-blue-100">15 سؤال لاختبار معلوماتك</p>
+                    </div>
+                    <i class="fa-solid fa-list-check text-3xl opacity-80"></i>
+                </button>
+
+                <!-- 2. Bubbles -->
+                <button onclick="startGame('bubbles')" class="btn-bounce bg-gradient-to-r from-cyan-500 to-cyan-600 text-white p-4 rounded-xl shadow-md flex items-center justify-between">
+                    <div class="text-right">
+                        <h4 class="font-bold text-lg">الفقاعات المتساقطة</h4>
+                        <p class="text-xs text-cyan-100">المس الفقاعة الصحيحة قبل سقوطها</p>
+                    </div>
+                    <i class="fa-solid fa-droplet text-3xl opacity-80"></i>
+                </button>
+
+                <!-- 3. Shoot (Targets) -->
+                <button onclick="startGame('shoot')" class="btn-bounce bg-gradient-to-r from-red-500 to-red-600 text-white p-4 rounded-xl shadow-md flex items-center justify-between">
+                    <div class="text-right">
+                        <h4 class="font-bold text-lg">التنشين المتحرك</h4>
+                        <p class="text-xs text-red-100">صِد الهدف الصحيح المتحرك</p>
+                    </div>
+                    <i class="fa-solid fa-bullseye text-3xl opacity-80"></i>
+                </button>
+
+                <!-- 4. True/False -->
+                <button onclick="startGame('tf')" class="btn-bounce bg-gradient-to-r from-orange-500 to-orange-600 text-white p-4 rounded-xl shadow-md flex items-center justify-between">
+                    <div class="text-right">
+                        <h4 class="font-bold text-lg">صح أم خطأ</h4>
+                        <p class="text-xs text-orange-100">حدد صحة العبارات</p>
+                    </div>
+                    <i class="fa-solid fa-check-double text-3xl opacity-80"></i>
+                </button>
+
+                <!-- 5. Matching -->
+                <button onclick="startGame('match')" class="btn-bounce bg-gradient-to-r from-green-500 to-green-600 text-white p-4 rounded-xl shadow-md flex items-center justify-between">
+                    <div class="text-right">
+                        <h4 class="font-bold text-lg">لعبة التوصيل</h4>
+                        <p class="text-xs text-green-100">اربط بين المفاهيم الصحيحة</p>
+                    </div>
+                    <i class="fa-solid fa-link text-3xl opacity-80"></i>
+                </button>
+
+                <!-- 6. Fill in the Blanks -->
+                <button onclick="startGame('fill')" class="btn-bounce bg-gradient-to-r from-purple-500 to-purple-600 text-white p-4 rounded-xl shadow-md flex items-center justify-between">
+                    <div class="text-right">
+                        <h4 class="font-bold text-lg">الكلمة المفقودة</h4>
+                        <p class="text-xs text-purple-100">أكمل الفراغ لتكتمل العبارة</p>
+                    </div>
+                    <i class="fa-solid fa-puzzle-piece text-3xl opacity-80"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- Shared Internal Game Header (Compact) -->
+        <div id="game-header" class="hidden mb-6 bg-white p-3 rounded-xl shadow-sm border border-gray-100 flex flex-col gap-3">
+            <div class="flex justify-between items-center w-full">
+                <button onclick="goHome()" class="btn-bounce bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-2 rounded-lg font-bold text-sm flex items-center gap-2">
+                    <i class="fa-solid fa-arrow-right"></i> للرئيسية
+                </button>
+                
+                <div class="flex items-center gap-3">
+                    <div class="text-left hidden sm:block">
+                        <p class="text-xs text-gray-500 font-bold">أ. حبيب بُشرى</p>
+                        <p class="text-sm font-bold text-teal-700">القوى الكهربية والمغناطيسية</p>
+                    </div>
+                    <img src="pic.jpeg" class="w-10 h-10 rounded-full border-2 border-teal-500 object-cover bg-gray-100" onerror="this.src='data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMDAgMTAwIj48Y2lyY2xlIGN4PSI1MCIgY3k9IjQ1IiByPSIyMCIgZmlsbD0iI2RjZmNlNyIvPjxjaXJjbGUgY3g9IjUwIiBjeT0iMTA1IiByPSI0NSIgZmlsbD0iI2RjZmNlNyIvPjwvc3ZnPg==';">
+                </div>
+            </div>
+            
+            <div class="flex justify-between items-center w-full border-t border-gray-100 pt-2">
+                <div id="timer-container" class="flex flex-col w-1/3 transition-opacity duration-300">
+                    <div class="flex items-center gap-1 text-red-600 font-bold text-sm">
+                        <i class="fa-solid fa-stopwatch"></i> الوقت: <span id="timer-display">60</span>ث
+                    </div>
+                    <div class="w-full bg-gray-200 rounded-full h-1.5 mt-1">
+                        <div id="timer-bar" class="bg-red-500 h-1.5 rounded-full" style="width: 100%; transition: width 1s linear;"></div>
+                    </div>
+                </div>
+
+                <h2 id="current-game-title" class="text-base sm:text-lg font-bold text-teal-700 text-center w-1/3">عنوان اللعبة</h2>
+                
+                <div class="text-sm sm:text-base font-bold text-gray-600 bg-gray-50 px-3 py-1 rounded-lg border w-1/3 text-left">
+                    النتيجة: <span id="current-score" class="text-teal-600">0</span>/15
+                </div>
+            </div>
+        </div>
+
+        <!-- Game Screens Container -->
+        
+        <!-- 1. MCQ Game -->
+        <div id="screen-mcq" class="hidden game-screen">
+            <div class="glass-panel p-6 rounded-2xl">
+                <div class="w-full bg-gray-200 rounded-full h-2.5 mb-6">
+                    <div id="mcq-progress" class="bg-blue-600 h-2.5 rounded-full" style="width: 0%"></div>
+                </div>
+                <h3 id="mcq-question" class="text-2xl font-bold text-gray-800 mb-6 text-center leading-relaxed"></h3>
+                <div id="mcq-options" class="grid grid-cols-1 gap-3"></div>
+            </div>
+        </div>
+
+        <!-- 2. Bubbles Game (Vertical Falling) -->
+        <div id="screen-bubbles" class="hidden game-screen">
+            <div class="glass-panel p-6 rounded-2xl">
+                <div class="w-full bg-gray-200 rounded-full h-2.5 mb-4">
+                    <div id="bubbles-progress" class="bg-cyan-500 h-2.5 rounded-full" style="width: 0%"></div>
+                </div>
+                <div class="bg-cyan-50 border border-cyan-200 rounded-xl p-4 mb-4 text-center">
+                    <h3 id="bubbles-question" class="text-xl font-bold text-gray-800"></h3>
+                </div>
+                <div id="bubbles-game-area" class="relative w-full h-[450px] overflow-hidden rounded-xl shadow-inner bg-gradient-to-b from-blue-50 to-cyan-100">
+                    <!-- Bubbles injected via JS -->
+                </div>
+            </div>
+        </div>
+
+        <!-- 3. Shoot Game (Horizontal Targets) -->
+        <div id="screen-shoot" class="hidden game-screen">
+            <div class="glass-panel p-6 rounded-2xl">
+                <div class="w-full bg-gray-200 rounded-full h-2.5 mb-4">
+                    <div id="shoot-progress" class="bg-red-500 h-2.5 rounded-full" style="width: 0%"></div>
+                </div>
+                <div class="bg-red-50 border border-red-200 rounded-xl p-4 mb-4 text-center">
+                    <h3 id="shoot-question" class="text-xl font-bold text-gray-800"></h3>
+                </div>
+                <div id="shoot-game-area" class="relative w-full h-[450px] overflow-hidden bg-gray-900 border-4 border-gray-700 rounded-xl shadow-inner">
+                    <!-- Targets injected via JS -->
+                </div>
+            </div>
+        </div>
+
+        <!-- 4. True/False Game -->
+        <div id="screen-tf" class="hidden game-screen">
+            <div class="glass-panel p-6 rounded-2xl flex flex-col">
+                <div class="w-full bg-gray-200 rounded-full h-2.5 mb-6">
+                    <div id="tf-progress" class="bg-orange-500 h-2.5 rounded-full" style="width: 0%"></div>
+                </div>
+                <p class="text-center font-bold text-gray-600 mb-6 text-lg">اقرأ العبارة وحدد: صح أم خطأ؟</p>
+                <div class="flex items-center justify-center mb-8">
+                    <div id="tf-statement" class="bg-white border-2 border-orange-300 text-gray-800 font-bold text-xl md:text-2xl py-8 px-6 rounded-2xl shadow-md w-full text-center min-h-[150px] flex items-center justify-center leading-relaxed"></div>
+                </div>
+                <div class="grid grid-cols-2 gap-4 w-full">
+                    <button onclick="checkTF(true)" class="btn-bounce bg-green-500 hover:bg-green-600 text-white p-6 rounded-xl flex flex-col items-center gap-2 shadow-lg">
+                        <i class="fa-solid fa-check text-5xl mb-2"></i><span class="font-bold text-xl md:text-2xl">صح</span>
+                    </button>
+                    <button onclick="checkTF(false)" class="btn-bounce bg-red-500 hover:bg-red-600 text-white p-6 rounded-xl flex flex-col items-center gap-2 shadow-lg">
+                        <i class="fa-solid fa-xmark text-5xl mb-2"></i><span class="font-bold text-xl md:text-2xl">خطأ</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 5. Match Game -->
+        <div id="screen-match" class="hidden game-screen">
+            <div class="glass-panel p-4 rounded-2xl">
+                <div class="w-full bg-gray-200 rounded-full h-2.5 mb-4">
+                    <div id="match-progress" class="bg-green-600 h-2.5 rounded-full" style="width: 0%"></div>
+                </div>
+                <p class="text-center text-gray-600 mb-4 font-bold">المس عنصراً من القائمة الأولى ثم ما يناسبه من الثانية</p>
+                <div class="flex gap-4 justify-between" id="match-container">
+                    <div class="w-1/2 space-y-2 flex flex-col" id="match-list-a"></div>
+                    <div class="w-1/2 space-y-2 flex flex-col" id="match-list-b"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 6. Fill in the Blanks Game -->
+        <div id="screen-fill" class="hidden game-screen">
+            <div class="glass-panel p-4 md:p-6 rounded-2xl flex flex-col">
+                <div class="w-full bg-gray-200 rounded-full h-2.5 mb-4 md:mb-6">
+                    <div id="fill-progress" class="bg-purple-500 h-2.5 rounded-full" style="width: 0%"></div>
+                </div>
+                <p class="text-center font-bold text-gray-600 mb-4 md:mb-6 text-sm md:text-lg">اختر الكلمة المناسبة لتكملة العبارة</p>
+                <div class="bg-white border-2 border-purple-200 py-6 px-4 md:py-8 md:px-6 rounded-2xl shadow-sm text-center mb-6 flex items-center justify-center min-h-[120px] md:min-h-[160px]">
+                    <h3 id="fill-sentence" class="text-lg sm:text-xl md:text-3xl font-bold text-gray-800 leading-loose"></h3>
+                </div>
+                <div id="fill-options" class="grid grid-cols-1 sm:grid-cols-2 gap-3 md:gap-4"></div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Feedback Modal -->
+    <div id="feedback-modal" class="fixed inset-0 bg-black bg-opacity-60 z-50 hidden flex items-center justify-center p-4 backdrop-blur-sm">
+        <div id="feedback-content" class="bg-white rounded-2xl p-6 max-w-sm w-full text-center transform scale-50 opacity-0 transition-all duration-300">
+            <div id="feedback-icon" class="text-6xl mb-4"></div>
+            <h3 id="feedback-title" class="text-2xl font-bold mb-2"></h3>
+            <p id="feedback-msg" class="text-gray-600 mb-6 font-bold text-lg leading-relaxed"></p>
+            <button onclick="closeFeedback()" class="bg-teal-500 text-white font-bold py-3 px-8 rounded-xl shadow-md w-full hover:bg-teal-600 transition-colors">متابعة</button>
+        </div>
+    </div>
+
+    <!-- End Game Modal -->
+    <div id="endgame-modal" class="fixed inset-0 bg-teal-900 bg-opacity-95 z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl p-8 max-w-md w-full text-center shadow-2xl">
+            <i class="fa-solid fa-trophy text-6xl text-yellow-400 mb-4"></i>
+            <h2 class="text-3xl font-bold text-teal-800 mb-2">اكتملت اللعبة!</h2>
+            <p class="text-xl text-gray-700 mb-6 font-bold">لقد حققت <span id="endgame-score" class="text-teal-600 text-2xl">15</span> من 15</p>
+            <button onclick="goHome()" class="w-full bg-gradient-to-r from-teal-500 to-emerald-500 text-white font-bold py-4 rounded-xl shadow-lg text-xl btn-bounce">
+                العودة للرئيسية
+            </button>
+        </div>
+    </div>
+
+    <!-- WhatsApp -->
+    <a href="https://wa.me/201008822782" target="_blank" class="fixed bottom-6 right-6 bg-green-500 text-white w-14 h-14 rounded-full flex items-center justify-center shadow-lg hover:bg-green-600 hover:scale-110 transition-all z-40 btn-bounce border-2 border-white z-50">
+        <i class="fa-brands fa-whatsapp text-3xl"></i>
+    </a>
+
+    <script>
+        // --- Utility Functions ---
+        function shuffleArray(originalArray) {
+            let array = originalArray.slice(); 
+            let currentIndex = array.length, randomIndex, tempValue;
+            while (currentIndex > 0) {
+                randomIndex = Math.floor(Math.random() * currentIndex);
+                currentIndex--;
+                tempValue = array[currentIndex];
+                array[currentIndex] = array[randomIndex];
+                array[randomIndex] = tempValue;
+            }
+            return array;
+        }
+
+        // --- Audio Engine (Disabled as requested) ---
+        function initAudio() {}
+        document.addEventListener('pointerdown', initAudio, { once: true });
+        document.addEventListener('keydown', initAudio, { once: true });
+        function playSound(type) { return; }
+
+        // --- Data Datasets (10 Normal + 5 Hard) per Game (Based ONLY on the provided PDF) ---
+        
+        const mcqData = [
+            { q: "اكتشف العالم هانز أورستد أن مرور تيار كهربى فى سلك ينتج عنه مجال:", options: ["مغناطيسى", "كيميائى", "حرارى", "ضوئى"], ans: "مغناطيسى" },
+            { q: "تنحرف إبرة البوصلة عن اتجاهها الأصلى عند إمرار تيار كهربى فى سلك مواز لمحورها بسبب:", options: ["توّلد مجال مغناطيسى حول السلك", "ارتفاع درجة حرارة السلك", "تغير لون السلك", "توقف التيار الكهربى"], ans: "توّلد مجال مغناطيسى حول السلك" },
+            { q: "جهاز يتكون من سلك نحاسى معزول ملفوف حول قلب من الحديد المطاوع يتولد حوله مجال مغناطيسى عند مرور تيار كهربى يسمى:", options: ["المغناطيس الكهربى", "المغناطيس الدائم", "المحرك الكهربى", "المولد الكهربى"], ans: "المغناطيس الكهربى" },
+            { q: "يتميز المغناطيس الكهربى بكونه مغناطيسًا مؤقتًا لأنه:", options: ["يمكن تشغيله وفصله عن طريق التحكم فى التيار الكهربى بالملف", "يفقد قوته المغناطيسية بعد ساعة من التشغيل", "لا يمكن التحكم فى قوته أبدًا", "يعمل فقط بدون تيار كهربى"], ans: "يمكن تشغيله وفصله عن طريق التحكم فى التيار الكهربى بالملف" },
+            { q: "من العوامل المؤثرة على قوة المغناطيس الكهربى زيادة عدد لفات الملف، وشدة التيار الكهربى، ونوع:", options: ["مادة قلب المغناطيس الكهربى", "لون السلك النحاسى", "طول الأسلاك الخارجية فقط", "حجم البطارية فقط"], ans: "مادة قلب المغناطيس الكهربى" },
+            { q: "جهاز يعتمد على التأثير المغناطيسى للتيار الكهربى باستخدام مغناطيس كهربى مؤقت لإحداث الرنين:", options: ["الجرس الكهربائى", "المحرك الكهربى", "المولد الكهربى", "المفتاح الكهربى"], ans: "الجرس الكهربائى" },
+            { q: "جهاز يحول الطاقة الكهربية إلى طاقة ميكانيكية (حركية):", options: ["المحرك الكهربى (الموتور)", "المولد الكهربى (الدينامو)", "المغناطيس الكهربى", "البطارية"], ans: "المحرك الكهربى (الموتور)" },
+            { q: "يتركب محرك التيار المستمر البسيط من ملف نحاسى وأسطوانة مشقوقة إلى نصفين ومغناطيس دائم على شكل حرف U ومصدر كهربى مستمر، بالإضافة إلى:", options: ["فرشاتان من الجرافيت", "مروحة تبريد", "مقاومة متغيرة فقط", "بوصلة مغناطيسية"], ans: "فرشاتان من الجرافيت" },
+            { q: "العزم الناتج عندما تؤثر على الجسم قوتان متساويتان فى المقدار متضادتان فى الاتجاه ومختلفتان فى خط العمل يسمى:", options: ["عزم الازدواج", "الشغل المبذول", "القوة المغناطيسية", "التيار الكهربى"], ans: "عزم الازدواج" },
+            { q: "من العوامل التى يتوقف عليها عزم الازدواج المؤثر على ملف المحرك شدة التيار وعدد لفات الملف ومساحة وجه الملف و:", options: ["شدة المجال المغناطيسى", "لون الملف", "طول الأسلاك الخارجية", "نوع البطارية فقط"], ans: "شدة المجال المغناطيسى" },
+            { q: "يمكن تغيير اتجاه دوران الملف فى المحرك الكهربى عن طريق عكس اتجاه التيار أو عكس اتجاه:", options: ["المجال المغناطيسى المؤثر على الملف", "لون الأسلاك", "شكل الملف فقط", "حجم البطارية فقط"], ans: "المجال المغناطيسى المؤثر على الملف" },
+            { q: "جهاز يقوم بتحويل الطاقة الميكانيكية (الحركية) إلى طاقة كهربية:", options: ["المولد الكهربى (الدينامو)", "المحرك الكهربى (الموتور)", "المغناطيس الكهربى", "الجرس الكهربائى"], ans: "المولد الكهربى (الدينامو)" },
+            { q: "تتولد قوة دافعة كهربية تسبب مرور تيار كهربى فى الدائرة الخارجية للمولد عندما يقطع الملف أثناء دورانه:", options: ["خطوط المجال المغناطيسى", "الفرشاة الجرافيتية فقط", "الأسطوانة المشقوقة فقط", "المصدر الكهربى فقط"], ans: "خطوط المجال المغناطيسى" },
+            { q: "تزداد شدة التيار الناتج فى المولد الكهربى بزيادة سرعة دوران الملف وزيادة:", options: ["شدة المجال المغناطيسى", "طول الأسلاك الخارجية", "حجم الأسطوانة فقط", "وزن المغناطيس فقط"], ans: "شدة المجال المغناطيسى" },
+            { q: "تستمد توربينات محطات توليد الطاقة الكهربية طاقة دورانها من مصادر مختلفة مثل مساقط المياه والبخار و:", options: ["الرياح", "الوقود الصلب فقط", "الطاقة النووية فقط", "الكهرباء المخزنة"], ans: "الرياح" }
+        ];
+
+        const bubblesData = [
+            { q: "منطقة حول المغناطيس تظهر فيها آثار قوته المغناطيسية تسمى:", options: ["المجال المغناطيسى", "التيار الكهربى", "فرق الجهد", "المقاومة الكهربية"], ans: "المجال المغناطيسى" },
+            { q: "مغناطيس صغير حر الحركة يتخذ طبيعيًا اتجاه الشمال الجنوب المغناطيسى للأرض:", options: ["إبرة البوصلة", "الملف النحاسى", "القلب الحديدى", "الفرشاة الجرافيتية"], ans: "إبرة البوصلة" },
+            { q: "يتكون المغناطيس الكهربى من سلك نحاسى معزول ملفوف حول قلب من:", options: ["الحديد المطاوع", "النحاس الخالص", "الألومنيوم", "البلاستيك"], ans: "الحديد المطاوع" },
+            { q: "زيادة عدد لفات الملف النحاسى حول قلب الحديد تؤدى إلى زيادة قوة المجال المغناطيسى بعلاقة:", options: ["طردية", "عكسية", "لا علاقة بينهما", "تصاعدية ثم متناقصة"], ans: "طردية" },
+            { q: "تستخدم الرافعات الصناعية المغناطيس الكهربى فى نقل الكتل الحديدية الضخمة مثل:", options: ["الخردة", "المياه", "الزجاج", "الأخشاب"], ans: "الخردة" },
+            { q: "يتوقف الجرس الكهربائى عن الرنين فور رفع الإصبع عن زر التشغيل لأن الدائرة الكهربية:", options: ["تُفتح فينقطع التيار الكهربى", "تُغلق فيزيد التيار", "تنصهر أسلاكها", "تتوقف البطارية عن العمل نهائيًا"], ans: "تُفتح فينقطع التيار الكهربى" },
+            { q: "جهاز يحول الطاقة الكهربية إلى طاقة ميكانيكية يستخدم فى الغسالات والمراوح والخلاطات:", options: ["المحرك الكهربى", "المولد الكهربى", "المغناطيس الكهربى", "الجرس الكهربائى"], ans: "المحرك الكهربى" },
+            { q: "يصنع المغناطيس الدائم فى محرك التيار المستمر البسيط على شكل حرف:", options: ["U", "S", "N", "V"], ans: "U" },
+            { q: "تعمل الأسطوانة المشقوقة والفرشاتان الجرافيتيتان فى المحرك الكهربى كمدخل ومخرج للتيار:", options: ["الكهربى للملف", "الحرارى فقط", "الضوئى فقط", "المغناطيسى المباشر"], ans: "الكهربى للملف" },
+            { q: "عزم الازدواج الناتج على ملف المحرك يعمل على:", options: ["دوران الملف", "تسخين الملف", "تكسير الملف", "إيقاف دوران الملف"], ans: "دوران الملف" },
+            { q: "عند إدارة مقود السيارة بكلتا اليدين فى اتجاهين متضادين فإن ذلك مثال على:", options: ["عزم الازدواج", "المجال المغناطيسى", "التيار الكهربى", "الشحنة الكهربية"], ans: "عزم الازدواج" },
+            { q: "المولد الكهربى (الدينامو) يقوم بتحويل الطاقة الحركية إلى طاقة:", options: ["كهربية", "حرارية فقط", "كيميائية", "نووية"], ans: "كهربية" },
+            { q: "دينامو الدراجة ينقل الحركة إلى ملفه بالاحتكاك من خلال عجلة الدراجة، وهذا يعمل على إضاءة مصباح الدراجة دون الحاجة إلى:", options: ["بطاريات", "مغناطيس", "أسلاك توصيل", "ملف نحاسى"], ans: "بطاريات" },
+            { q: "تُستخدم توربينات ضخمة فى محطات توليد الطاقة الكهربية لتدوير ملفات:", options: ["الدينامو العملاقة", "المحرك الصغير فقط", "المغناطيس الكهربى فقط", "البوصلة"], ans: "الدينامو العملاقة" },
+            { q: "تُستخدم مولدات الطوارئ فى المستشفيات لتوفير الكهرباء اللازمة لتشغيل الأجهزة الطبية عند:", options: ["انقطاع التيار الكهربى", "زيادة التيار الكهربى", "ثبات التيار الكهربى", "انخفاض درجة الحرارة"], ans: "انقطاع التيار الكهربى" }
+        ];
+
+        const shootData = [
+            { q: "عند وضع موصل أو سلك مستقيم عموديًا على اتجاه مجال مغناطيسى ومرر تيار كهربى خلاله فإن السلك يتأثر بـ:", options: ["قوة مغناطيسية تؤدى إلى تحريكه", "قوة جاذبية أرضية إضافية فقط", "قوة احتكاك فقط", "لا يتأثر بأى قوة"], ans: "قوة مغناطيسية تؤدى إلى تحريكه" },
+            { q: "إذا وضعنا ملفًا بين قطبى المغناطيس بدلًا من سلك مستقيم ومر خلاله تيار كهربى فإن الملف يتحرك بشكل مختلف عن السلك، وهذا ما يحدث داخل:", options: ["المحرك الكهربى", "المغناطيس الدائم فقط", "إبرة البوصلة فقط", "الأسلاك العادية"], ans: "المحرك الكهربى" },
+            { q: "تتولد قوة مغناطيسية على كل من الضلعين الطويلين المتعامدين على اتجاه المجال المغناطيسى فى ملف المحرك، وتكون هاتان القوتان:", options: ["متساويتين فى المقدار ومتضادتين فى الاتجاه", "مختلفتين فى المقدار ومتفقتين فى الاتجاه", "متساويتين فى المقدار ومتفقتين فى الاتجاه", "معدومتين تمامًا"], ans: "متساويتين فى المقدار ومتضادتين فى الاتجاه" },
+            { q: "زيادة شدة التيار المار فى ملف المحرك تؤدى إلى زيادة عزم الازدواج بعلاقة:", options: ["طردية", "عكسية", "لا علاقة بينهما", "تناقصية"], ans: "طردية" },
+            { q: "زيادة عدد لفات ملف المحرك تؤدى إلى زيادة عزم الازدواج المؤثر على الملف بعلاقة:", options: ["طردية", "عكسية", "ثابتة دائمًا", "لا علاقة"], ans: "طردية" },
+            { q: "يمكن زيادة شدة المجال المغناطيسى المؤثر على ملف المحرك عن طريق استخدام مغناطيس أكثر قوة أو استخدام:", options: ["عدد أكبر من المغناطيسات", "أسلاك أطول فقط", "بطارية أضعف", "ملف أقصر"], ans: "عدد أكبر من المغناطيسات" },
+            { q: "يمكن عكس اتجاه دوران الملف فى المحرك الكهربى بعكس قطبى البطارية فى الدائرة الخارجية أو بتبديل مواضع:", options: ["الأقطاب المغناطيسية", "الفرشاتين الجرافيتيتين فقط", "الأسطوانة المشقوقة فقط", "الملف النحاسى فقط"], ans: "الأقطاب المغناطيسية" },
+            { q: "علل: يجب عمل إحدى طريقتى عكس اتجاه الدوران فقط (التيار أو المجال) وليس كلتيهما معًا - لأن عكسهما معًا:", options: ["يُبقى اتجاه الدوران كما هو دون تغيير", "يُوقف المحرك عن الدوران تمامًا", "يزيد سرعة الدوران للضعف", "يكسر المحرك فورًا"], ans: "يُبقى اتجاه الدوران كما هو دون تغيير" },
+            { q: "يعتمد المثقاب والمفك الكهربائى على إمكانية التحكم فى سرعة دوران المحرك، فعند ثقب الجدران يُضبط المحرك على سرعة:", options: ["عالية جدًا", "منخفضة جدًا", "صفرية", "متوسطة فقط دائمًا"], ans: "عالية جدًا" },
+            { q: "عند فك أو ربط المسامير اللولبية يُضبط محرك المفك على سرعة دوران منخفضة لضمان الدقة وعدم:", options: ["إتلاف رأس المسمار", "زيادة قوة الدوران", "تسخين المحرك بسرعة", "توقف المحرك فجأة"], ans: "إتلاف رأس المسمار" },
+            { q: "يعمل المولد الكهربى بطريقة عكسية للمحرك الكهربى، فينتج طاقة كهربية عند تدوير محور ملفه:", options: ["يدويًا فى مجال مغناطيسى", "بدون أى مجال مغناطيسى", "داخل الماء فقط", "فى الفراغ التام فقط"], ans: "يدويًا فى مجال مغناطيسى" },
+            { q: "تزداد شدة إضاءة مصباح الدراجة المزودة بدينامو مع زيادة سرعة دوران إطاراتها؛ لأن ذلك يزيد من:", options: ["القوة الدافعة الكهربية التى ينتجها الدينامو", "وزن الدراجة", "حجم العجلات", "درجة حرارة الإطارات فقط"], ans: "القوة الدافعة الكهربية التى ينتجها الدينامو" },
+            { q: "يضىء مصباح الدراجة عند حركة العجلات رغم عدم وجود بطارية؛ لأن دينامو الدراجة ينقل الحركة بالاحتكاك إلى ملفه محولًا الطاقة الحركية إلى:", options: ["طاقة كهربية", "طاقة ضوئية مباشرة بدون تحويل", "طاقة كيميائية", "طاقة نووية"], ans: "طاقة كهربية" },
+            { q: "تستمد التوربينات فى محطات توليد الكهرباء طاقة دورانها من مصادر مثل مساقط المياه والبخار والرياح، ثم تُستخدم هذه الطاقة لتدوير ملفات:", options: ["الدينامو العملاقة", "المحركات الصغيرة فقط", "المغناطيس الكهربى فقط", "الفرشاة الجرافيتية فقط"], ans: "الدينامو العملاقة" },
+            { q: "تعد المولدات الكهربية فى المستشفيات ذات أهمية حيوية لأنها توفر الكهرباء اللازمة لتشغيل الأجهزة الطبية عند:", options: ["انقطاع التيار الكهربى", "ارتفاع تكلفة الكهرباء", "زيادة عدد المرضى", "توافر الطاقة الشمسية"], ans: "انقطاع التيار الكهربى" }
+        ];
+
+        const tfData = [
+            { text: "اكتشف العالم هانز أورستد أن مرور تيار كهربى فى سلك ينتج عنه مجال مغناطيسى حوله.", isCorrect: true },
+            { text: "المجال المغناطيسى هو منطقة حول المغناطيس تظهر فيها آثار قوته المغناطيسية.", isCorrect: true },
+            { text: "يصنع قلب المغناطيس الكهربى من مادة عازلة مثل البلاستيك.", isCorrect: false },
+            { text: "زيادة عدد لفات الملف النحاسى تؤدى إلى زيادة قوة المجال المغناطيسى للمغناطيس الكهربى.", isCorrect: true },
+            { text: "المغناطيس الكهربى مغناطيس دائم لا يمكن التحكم فى قوته أو إيقافه.", isCorrect: false },
+            { text: "يعتمد الجرس الكهربائى على التأثير المغناطيسى للتيار الكهربى باستخدام مغناطيس كهربى مؤقت.", isCorrect: true },
+            { text: "المحرك الكهربى جهاز يحول الطاقة الكهربية إلى طاقة ميكانيكية.", isCorrect: true },
+            { text: "يتركب محرك التيار المستمر البسيط من ملف نحاسى ومغناطيس دائم وأسطوانة مشقوقة وفرشاتين من الجرافيت.", isCorrect: true },
+            { text: "عزم الازدواج ينشأ عن قوتين متساويتين فى المقدار ومتفقتين فى الاتجاه.", isCorrect: false },
+            { text: "زيادة شدة التيار المار فى ملف المحرك تؤدى إلى زيادة عزم الازدواج.", isCorrect: true },
+            { text: "لا يمكن تغيير اتجاه دوران الملف فى المحرك الكهربى بأى طريقة.", isCorrect: false },
+            { text: "المولد الكهربى (الدينامو) يحول الطاقة الميكانيكية (الحركية) إلى طاقة كهربية.", isCorrect: true },
+            { text: "تزداد شدة التيار الناتج فى المولد الكهربى بزيادة سرعة دوران الملف وزيادة شدة المجال المغناطيسى.", isCorrect: true },
+            { text: "دينامو الدراجة يحتاج إلى بطارية لإضاءة المصباح.", isCorrect: false },
+            { text: "تُستخدم مولدات الطوارئ فى المستشفيات لتوفير الكهرباء عند انقطاع التيار الكهربى.", isCorrect: true }
+        ];
+
+        const matchData = [
+            { a: "المجال المغناطيسى", b: "منطقة حول المغناطيس تظهر فيها آثار قوته المغناطيسية" },
+            { a: "التأثير المغناطيسى للتيار الكهربى", b: "الظاهرة الناتجة عن مرور تيار كهربى فى سلك مما يؤدى إلى توليد مجال مغناطيسى حوله" },
+            { a: "المغناطيس الكهربى", b: "سلك نحاسى معزول ملفوف حول قلب من الحديد المطاوع يولد مجالًا مغناطيسيًا عند مرور تيار كهربى" },
+            { a: "الجرس الكهربائى", b: "جهاز يعتمد على التأثير المغناطيسى للتيار الكهربى باستخدام مغناطيس كهربى مؤقت لإحداث الرنين" },
+            { a: "المحرك الكهربى (الموتور)", b: "جهاز يحول الطاقة الكهربية إلى طاقة ميكانيكية (حركية)" },
+            { a: "عزم الازدواج", b: "العزم الناتج عن قوتين متساويتين فى المقدار ومتضادتين فى الاتجاه ومختلفتين فى خط العمل" },
+            { a: "الفرشاتان الجرافيتيتان", b: "تعملان كمدخل ومخرج للتيار الكهربى فى محرك التيار المستمر البسيط" },
+            { a: "الأسطوانة المشقوقة", b: "جزء فى محرك التيار المستمر يعكس اتجاه التيار فى الملف كل نصف دورة للحفاظ على استمرار الدوران" },
+            { a: "المولد الكهربى (الدينامو)", b: "جهاز يقوم بتحويل الطاقة الميكانيكية (الحركية) إلى طاقة كهربية" },
+            { a: "دينامو الدراجة", b: "جهاز يحول الطاقة الحركية للعجلات إلى طاقة كهربية لإضاءة المصباح دون الحاجة لبطارية" },
+            { a: "محطات توليد الطاقة الكهربية", b: "تستخدم توربينات ضخمة لتدوير ملفات الدينامو العملاقة من مصادر مثل المياه والبخار والرياح" },
+            { a: "مولدات الطوارئ", b: "مولدات تستخدم فى المنازل والمستشفيات والمصانع عند انقطاع التيار الكهربى" },
+            { a: "المثقاب والمفك الكهربائى", b: "تطبيقان على المحرك الكهربى يعتمدان على إمكانية التحكم فى سرعة دوران المحرك" },
+            { a: "طريقتا عكس اتجاه دوران المحرك", b: "عكس اتجاه التيار فى الدائرة الخارجية، أو عكس اتجاه المجال المغناطيسى بتبديل الأقطاب" },
+            { a: "خطوط المجال المغناطيسى", b: "خطوط وهمية تمثل اتجاه وشدة المجال المغناطيسى" }
+        ];
+
+        const fillData = [
+            { text: "اكتشف العالم هانز ... أن مرور تيار كهربى فى سلك ينتج عنه مجال مغناطيسى.", blank: "أورستد", options: ["أورستد", "أوم", "نيوتن", "فاراداى"] },
+            { text: "يتكون المغناطيس الكهربى من سلك نحاسى ملفوف حول قلب من ... .", blank: "الحديد المطاوع", options: ["الحديد المطاوع", "النحاس", "الألومنيوم", "البلاستيك"] },
+            { text: "زيادة عدد لفات الملف حول قلب الحديد تؤدى إلى ... قوة المجال المغناطيسى.", blank: "زيادة", options: ["زيادة", "نقصان", "ثبات", "انعدام"] },
+            { text: "يعتبر المغناطيس الكهربى مغناطيسًا ... لأنه يمكن التحكم فى تشغيله وإيقافه.", blank: "مؤقتًا", options: ["مؤقتًا", "دائمًا", "ضعيفًا", "معدومًا"] },
+            { text: "يعتمد ... الكهربائى على مغناطيس كهربى مؤقت لإحداث صوت الرنين.", blank: "الجرس", options: ["الجرس", "المحرك", "المولد", "المفتاح"] },
+            { text: "المحرك الكهربى جهاز يحول الطاقة الكهربية إلى طاقة ... .", blank: "ميكانيكية", options: ["ميكانيكية", "حرارية", "ضوئية", "كيميائية"] },
+            { text: "يصنع المغناطيس الدائم فى محرك التيار المستمر البسيط على شكل حرف ... .", blank: "U", options: ["U", "S", "N", "V"] },
+            { text: "العزم الناتج عن قوتين متساويتين متضادتين فى الاتجاه ومختلفتين فى خط العمل يسمى عزم ... .", blank: "الازدواج", options: ["الازدواج", "الدوران", "القصور", "الاحتكاك"] },
+            { text: "زيادة شدة التيار المار فى ملف المحرك تؤدى إلى ... عزم الازدواج.", blank: "زيادة", options: ["زيادة", "نقصان", "ثبات", "انعدام"] },
+            { text: "يمكن عكس اتجاه دوران ملف المحرك بعكس اتجاه التيار أو عكس اتجاه ... .", blank: "المجال المغناطيسى", options: ["المجال المغناطيسى", "لون الأسلاك", "شكل الملف", "حجم البطارية"] },
+            { text: "المولد الكهربى (الدينامو) يحول الطاقة الحركية إلى طاقة ... .", blank: "كهربية", options: ["كهربية", "حرارية", "ضوئية", "نووية"] },
+            { text: "تتولد قوة دافعة كهربية عندما يقطع الملف أثناء دورانه خطوط ... .", blank: "المجال المغناطيسى", options: ["المجال المغناطيسى", "التيار الكهربى", "المقاومة الكهربية", "الشحنة الساكنة"] },
+            { text: "دينامو الدراجة ينقل الحركة إلى ملفه بـ ... من عجلة الدراجة.", blank: "الاحتكاك", options: ["الاحتكاك", "الجاذبية", "التوصيل الكهربى", "الإشعاع"] },
+            { text: "تستخدم محطات توليد الطاقة توربينات ضخمة لتدوير ملفات الدينامو العملاقة من مصادر مثل المياه والبخار و... .", blank: "الرياح", options: ["الرياح", "الوقود الصلب", "الكهرباء المخزنة", "الإشعاع الشمسى المباشر"] },
+            { text: "تستخدم مولدات ... فى المستشفيات لتوفير الكهرباء عند انقطاع التيار.", blank: "الطوارئ", options: ["الطوارئ", "التبريد", "التدفئة", "الإنارة الدائمة"] }
+        ];
+
+        // --- Core Logic & Timer ---
+        let gameState = { currentScreen: 'home', activeGame: null, score: 0, questionIndex: 0, subLevel: 0, tempData: null, onFeedbackClose: null };
+        const titles = { mcq: "الاختيار من متعدد", match: "لعبة التوصيل", tf: "صح أم خطأ", fill: "الكلمة المفقودة", bubbles: "الفقاعات المتساقطة", shoot: "التنشين المتحرك" };
+        let gameTimer, timeLeft = 60, maxTime = 60;
+        let animTimeout;
+
+        function startTimer() {
+            clearInterval(gameTimer); 
+            // All games get 60 seconds
+            maxTime = 60;
+            timeLeft = maxTime; 
+            updateTimerUI();
+            
+            gameTimer = setInterval(() => {
+                timeLeft--; updateTimerUI();
+                if (timeLeft <= 0) { clearInterval(gameTimer); handleTimeout(); }
+            }, 1000);
+        }
+
+        function stopTimer() { clearInterval(gameTimer); }
+        
+        function resumeTimer() {
+            clearInterval(gameTimer);
+            gameTimer = setInterval(() => {
+                timeLeft--; updateTimerUI();
+                if (timeLeft <= 0) { clearInterval(gameTimer); handleTimeout(); }
+            }, 1000);
+        }
+
+        function updateTimerUI() {
+            document.getElementById('timer-display').innerText = timeLeft;
+            document.getElementById('timer-bar').style.width = (timeLeft / maxTime * 100) + '%';
+        }
+
+        function pauseAnimations() {
+            document.querySelectorAll('.game-anim-element').forEach(t => t.style.animationPlayState = 'paused');
+        }
+
+        function handleTimeout() {
+            playSound('wrong');
+            pauseAnimations();
+
+            if (gameState.activeGame === 'match') { forceMatchSkip(); return; }
+
+            const qData = gameState.tempData[gameState.questionIndex];
+            let correctAns = qData.ans || (qData.isCorrect ? "صح" : "خطأ") || qData.blank;
+            
+            showFeedback(false, `انتهى الوقت! الإجابة الصحيحة هي: ${correctAns}`, () => {
+                gameState.questionIndex++;
+                if (gameState.activeGame === 'mcq') loadMCQQuestion();
+                else if (gameState.activeGame === 'tf') loadTFQuestion();
+                else if (gameState.activeGame === 'fill') loadFillQuestion();
+                else if (gameState.activeGame === 'bubbles') loadBubblesQuestion();
+                else if (gameState.activeGame === 'shoot') loadShootQuestion();
+            });
+        }
+
+        function showScreen(screenId) {
+            document.querySelectorAll('#main-container > div').forEach(el => {
+                if (el.id !== 'game-header' && el.id !== 'screen-home') el.classList.add('hidden');
+            });
+            if (screenId === 'home') {
+                document.getElementById('screen-home').classList.remove('hidden');
+                document.getElementById('game-header').classList.add('hidden');
+            } else {
+                document.getElementById('screen-home').classList.add('hidden');
+                document.getElementById('game-header').classList.remove('hidden');
+                document.getElementById('screen-' + screenId).classList.remove('hidden');
+                document.getElementById('current-game-title').innerText = titles[gameState.activeGame];
+                updateScoreDisplay();
+            }
+            gameState.currentScreen = screenId;
+        }
+
+        function goHome() {
+            playSound('click'); stopTimer(); pauseAnimations(); clearTimeout(animTimeout);
+            document.getElementById('feedback-modal').classList.add('hidden');
+            gameState.onFeedbackClose = null; showScreen('home');
+            document.getElementById('endgame-modal').classList.add('hidden'); gameState.activeGame = null;
+        }
+
+        function startGame(gameType) {
+            playSound('click'); initAudio(); 
+            gameState.activeGame = gameType; gameState.score = 0; gameState.questionIndex = 0; gameState.subLevel = 0;
+            
+            if (gameType === 'bubbles' || gameType === 'shoot') {
+                document.getElementById('timer-container').classList.add('opacity-0');
+            } else {
+                document.getElementById('timer-container').classList.remove('opacity-0');
+            }
+
+            if (gameType === 'mcq') initMCQ();
+            else if (gameType === 'match') initMatch();
+            else if (gameType === 'tf') initTF();
+            else if (gameType === 'fill') initFill();
+            else if (gameType === 'bubbles') initBubbles();
+            else if (gameType === 'shoot') initShoot();
+            showScreen(gameType);
+        }
+
+        function updateScoreDisplay() { document.getElementById('current-score').innerText = gameState.score; }
+        function endGame() {
+            stopTimer(); document.getElementById('endgame-score').innerText = gameState.score;
+            document.getElementById('endgame-modal').classList.remove('hidden'); playSound('correct');
+        }
+
+        function showFeedback(isCorrect, message, callback) {
+            const modal = document.getElementById('feedback-modal'); const content = document.getElementById('feedback-content');
+            const icon = document.getElementById('feedback-icon'); const title = document.getElementById('feedback-title');
+            const msg = document.getElementById('feedback-msg');
+            gameState.onFeedbackClose = callback;
+
+            if (isCorrect) {
+                playSound('correct'); icon.innerHTML = '<i class="fa-solid fa-circle-check text-green-500 popup-anim"></i>';
+                title.innerText = "إجابة صحيحة!"; title.className = "text-2xl font-bold mb-2 text-green-600";
+            } else {
+                playSound('wrong'); icon.innerHTML = '<i class="fa-solid fa-circle-xmark text-red-500 popup-anim"></i>';
+                title.innerText = "إجابة خاطئة"; title.className = "text-2xl font-bold mb-2 text-red-600";
+            }
+            msg.innerText = message || ""; modal.classList.remove('hidden');
+            setTimeout(() => { content.classList.remove('scale-50', 'opacity-0'); content.classList.add('scale-100', 'opacity-100'); }, 10);
+        }
+
+        function closeFeedback() {
+            playSound('click'); const modal = document.getElementById('feedback-modal');
+            const content = document.getElementById('feedback-content');
+            content.classList.remove('scale-100', 'opacity-100'); content.classList.add('scale-50', 'opacity-0');
+            setTimeout(() => {
+                modal.classList.add('hidden');
+                if (gameState.onFeedbackClose) { gameState.onFeedbackClose(); gameState.onFeedbackClose = null; }
+            }, 300);
+        }
+
+        // --- 1. MCQ ---
+        function initMCQ() { gameState.tempData = shuffleArray(mcqData); loadMCQQuestion(); }
+        function loadMCQQuestion() {
+            if (gameState.questionIndex >= 15) return endGame();
+            const qData = gameState.tempData[gameState.questionIndex];
+            document.getElementById('mcq-question').innerText = (gameState.questionIndex + 1) + ". " + qData.q;
+            document.getElementById('mcq-progress').style.width = `${(gameState.questionIndex / 15) * 100}%`;
+            const optionsDiv = document.getElementById('mcq-options'); optionsDiv.innerHTML = '';
+            shuffleArray(qData.options).forEach(opt => {
+                const btn = document.createElement('button');
+                btn.className = "btn-bounce w-full bg-white border-2 border-blue-200 hover:bg-blue-50 text-blue-900 font-bold py-4 px-6 rounded-xl text-right shadow-sm text-lg transition-colors";
+                btn.innerText = opt; btn.onclick = () => { stopTimer(); checkMCQ(opt, qData.ans); };
+                optionsDiv.appendChild(btn);
+            });
+            startTimer();
+        }
+        function checkMCQ(selected, correct) {
+            const isCorrect = selected === correct;
+            if (isCorrect) gameState.score++; updateScoreDisplay();
+            showFeedback(isCorrect, isCorrect ? "أحسنت!" : `الإجابة الصحيحة هي: ${correct}`, () => { gameState.questionIndex++; loadMCQQuestion(); });
+        }
+
+        // --- 2. Bubbles Game (CSS Animation) ---
+        function initBubbles() { gameState.tempData = shuffleArray(bubblesData); loadBubblesQuestion(); }
+        function loadBubblesQuestion() {
+            if (gameState.questionIndex >= 15) return endGame();
+            const qData = gameState.tempData[gameState.questionIndex];
+            document.getElementById('bubbles-question').innerText = (gameState.questionIndex + 1) + ". " + qData.q;
+            document.getElementById('bubbles-progress').style.width = `${(gameState.questionIndex / 15) * 100}%`;
+            
+            const container = document.getElementById('bubbles-game-area'); container.innerHTML = '';
+            const opts = shuffleArray(qData.options);
+            const xPositions = [2, 27, 52, 77]; 
+
+            opts.forEach((opt, idx) => {
+                const bubble = document.createElement('div');
+                bubble.className = `game-anim-element anim-fall game-bubble absolute flex items-center justify-center p-2 w-20 h-20 sm:w-28 sm:h-28 text-xs sm:text-sm font-bold text-center cursor-pointer btn-bounce z-10`;
+                bubble.style.left = `${xPositions[idx]}%`;
+                bubble.innerText = opt;
+                bubble.onclick = () => processAnimGame(opt, qData.ans, 'bubbles');
+                container.appendChild(bubble);
+            });
+            
+            clearTimeout(animTimeout);
+            animTimeout = setTimeout(() => {
+                if (gameState.currentScreen === 'bubbles') processAnimTimeout('bubbles', qData.ans);
+            }, 40000);
+        }
+
+        // --- 3. Shoot Game (CSS Animation) ---
+        function initShoot() { gameState.tempData = shuffleArray(shootData); loadShootQuestion(); }
+        function loadShootQuestion() {
+            if (gameState.questionIndex >= 15) return endGame();
+            const qData = gameState.tempData[gameState.questionIndex];
+            document.getElementById('shoot-question').innerText = (gameState.questionIndex + 1) + ". " + qData.q;
+            document.getElementById('shoot-progress').style.width = `${(gameState.questionIndex / 15) * 100}%`;
+            
+            const container = document.getElementById('shoot-game-area'); container.innerHTML = '';
+            const opts = shuffleArray(qData.options);
+            const colors = ['#ef4444', '#3b82f6', '#10b981', '#f59e0b']; 
+            const yPositions = [10, 35, 60, 85]; 
+            const directions = [1, -1, 1, -1]; 
+
+            opts.forEach((opt, idx) => {
+                const target = document.createElement('div');
+                let animClass = directions[idx] === 1 ? 'anim-right' : 'anim-left';
+                target.className = `game-anim-element ${animClass} horizontal-target absolute text-gray-800 p-1 rounded-full text-center font-bold flex flex-col items-center justify-center w-20 h-20 sm:w-24 sm:h-24 text-[10px] sm:text-sm cursor-pointer z-10 btn-bounce`;
+                target.style.borderColor = colors[idx]; 
+                target.style.top = `calc(${yPositions[idx]}% - 20px)`;
+                
+                target.innerHTML = `<i class="fa-solid fa-bullseye text-2xl sm:text-3xl mb-1" style="color: ${colors[idx]}"></i><span>${opt}</span>`;
+                target.onclick = () => processAnimGame(opt, qData.ans, 'shoot');
+                container.appendChild(target);
+            });
+            
+            clearTimeout(animTimeout);
+            animTimeout = setTimeout(() => {
+                if (gameState.currentScreen === 'shoot') processAnimTimeout('shoot', qData.ans);
+            }, 35000);
+        }
+
+        // Shared processing for Animated Games (Bubbles & Shoot)
+        function processAnimGame(selected, correct, gameType) {
+            clearTimeout(animTimeout);
+            pauseAnimations();
+            const isCorrect = selected === correct;
+            if(isCorrect) gameState.score++; updateScoreDisplay();
+            showFeedback(isCorrect, isCorrect ? "إصابة دقيقة وممتازة!" : `للأسف أخطأت الهدف! الإجابة هي: ${correct}`, () => {
+                gameState.questionIndex++;
+                if(gameType === 'bubbles') loadBubblesQuestion(); else loadShootQuestion();
+            });
+        }
+
+        function processAnimTimeout(gameType, correct) {
+            playSound('wrong');
+            pauseAnimations();
+            showFeedback(false, `اختفت الأهداف! الإجابة الصحيحة هي: ${correct}`, () => {
+                gameState.questionIndex++;
+                if(gameType === 'bubbles') loadBubblesQuestion(); else loadShootQuestion();
+            });
+        }
+
+        // --- 4. True/False ---
+        function initTF() { gameState.tempData = shuffleArray(tfData); loadTFQuestion(); }
+        function loadTFQuestion() {
+            if (gameState.questionIndex >= 15) return endGame();
+            const currentItem = gameState.tempData[gameState.questionIndex];
+            document.getElementById('tf-progress').style.width = `${(gameState.questionIndex / 15) * 100}%`;
+            const tfStatement = document.getElementById('tf-statement'); tfStatement.innerText = currentItem.text;
+            tfStatement.classList.remove('popup-anim'); void tfStatement.offsetWidth; tfStatement.classList.add('popup-anim');
+            startTimer();
+        }
+        function checkTF(userAnswer) {
+            stopTimer(); const currentItem = gameState.tempData[gameState.questionIndex];
+            const isCorrect = currentItem.isCorrect === userAnswer;
+            if(isCorrect) gameState.score++; updateScoreDisplay();
+            showFeedback(isCorrect, isCorrect ? "إجابة صحيحة وممتازة!" : `إجابة خاطئة. العبارة ${currentItem.isCorrect?"صحيحة":"خاطئة"}.`, () => {
+                gameState.questionIndex++; loadTFQuestion();
+            });
+        }
+
+        // --- 5. Matching ---
+        function initMatch() { gameState.tempData = shuffleArray(matchData); gameState.subLevel = 0; gameState.questionIndex = 0; loadMatchRound(); }
+        function loadMatchRound() {
+            if (gameState.subLevel >= 3) return endGame();
+            const startIndex = gameState.subLevel * 5; const roundItems = gameState.tempData.slice(startIndex, startIndex + 5);
+            document.getElementById('match-progress').style.width = `${(gameState.questionIndex / 15) * 100}%`;
+            const listA = shuffleArray(roundItems.map(item => ({id: item.a, text: item.a, type: 'A'})));
+            const listB = shuffleArray(roundItems.map(item => ({id: item.a, text: item.b, type: 'B'}))); 
+            renderMatchList('match-list-a', listA); renderMatchList('match-list-b', listB);
+            matchSelectedA = null; matchSelectedB = null; startTimer();
+        }
+        function renderMatchList(containerId, items) {
+            const container = document.getElementById(containerId); container.innerHTML = '';
+            items.forEach(item => {
+                const btn = document.createElement('button');
+                btn.className = "match-item bg-white border-2 border-gray-200 text-gray-700 font-bold py-3 px-2 rounded-lg shadow-sm text-xs sm:text-sm text-center min-h-[60px] flex items-center justify-center";
+                btn.innerText = item.text; btn.dataset.id = item.id; btn.dataset.type = item.type;
+                btn.onclick = () => handleMatchClick(btn); container.appendChild(btn);
+            });
+        }
+        function handleMatchClick(btn) {
+            if(btn.classList.contains('matched') || btn.classList.contains('timeout-error')) return;
+            playSound('click'); const type = btn.dataset.type;
+            document.querySelectorAll(`#match-list-${type.toLowerCase()} .match-item`).forEach(el => {
+                if(!el.classList.contains('matched') && !el.classList.contains('timeout-error')) el.classList.remove('selected');
+            });
+            btn.classList.add('selected');
+            if (type === 'A') matchSelectedA = btn; else matchSelectedB = btn;
+            if (matchSelectedA && matchSelectedB) {
+                stopTimer(); const idA = matchSelectedA.dataset.id; const idB = matchSelectedB.dataset.id;
+                if (idA === idB) {
+                    matchSelectedA.classList.remove('selected'); matchSelectedA.classList.add('matched');
+                    matchSelectedB.classList.remove('selected'); matchSelectedB.classList.add('matched');
+                    gameState.score++; gameState.questionIndex++; updateScoreDisplay();
+                    document.getElementById('match-progress').style.width = `${(gameState.questionIndex / 15) * 100}%`;
+                    checkMatchRoundProgress(true);
+                } else {
+                    playSound('wrong'); matchSelectedA.classList.add('error'); matchSelectedB.classList.add('error');
+                    let a = matchSelectedA, b = matchSelectedB;
+                    setTimeout(() => { a.classList.remove('selected', 'error'); b.classList.remove('selected', 'error'); resumeTimer(); }, 500);
+                }
+                matchSelectedA = null; matchSelectedB = null;
+            }
+        }
+        function forceMatchSkip() {
+            matchSelectedA = null; matchSelectedB = null;
+            document.querySelectorAll('.match-item').forEach(el => el.classList.remove('selected'));
+            let unmatchedA = Array.from(document.querySelectorAll('#match-list-a .match-item')).find(el => !el.classList.contains('matched') && !el.classList.contains('timeout-error'));
+            if(unmatchedA) {
+                let id = unmatchedA.dataset.id; let unmatchedB = document.querySelector(`#match-list-b .match-item[data-id="${id}"]`);
+                showFeedback(false, "انتهى الوقت! فقدت هذه النقطة.", () => {
+                    unmatchedA.classList.add('timeout-error'); 
+                    if(unmatchedB) unmatchedB.classList.add('timeout-error');
+                    gameState.questionIndex++; document.getElementById('match-progress').style.width = `${(gameState.questionIndex / 15) * 100}%`;
+                    checkMatchRoundProgress(false);
+                });
+            }
+        }
+        function checkMatchRoundProgress(wasCorrect) {
+            const totalDone = document.querySelectorAll('#match-list-a .matched').length + document.querySelectorAll('#match-list-a .timeout-error').length;
+            if (totalDone === 5) {
+                if(wasCorrect) playSound('correct');
+                setTimeout(() => { gameState.subLevel++; loadMatchRound(); }, 1000);
+            } else {
+                if(wasCorrect) {
+                    playSound('correct'); 
+                }
+                startTimer();
+            }
+        }
+
+        // --- 6. Fill in the Blanks ---
+        function initFill() { gameState.tempData = shuffleArray(fillData); loadFillQuestion(); }
+        function loadFillQuestion() {
+            if (gameState.questionIndex >= 15) return endGame();
+            const currentItem = gameState.tempData[gameState.questionIndex];
+            document.getElementById('fill-progress').style.width = `${(gameState.questionIndex / 15) * 100}%`;
+            const sentenceHtml = currentItem.text.replace('...', '<span class="inline-block border-b-4 border-dashed border-purple-400 min-w-[70px] md:min-w-[100px] text-center text-purple-600 px-1 md:px-2 pb-1 mx-1 md:mx-2 relative top-1">؟</span>');
+            const sentenceEl = document.getElementById('fill-sentence'); sentenceEl.innerHTML = sentenceHtml;
+            sentenceEl.classList.remove('popup-anim'); void sentenceEl.offsetWidth; sentenceEl.classList.add('popup-anim');
+            const optionsContainer = document.getElementById('fill-options'); optionsContainer.innerHTML = '';
+            shuffleArray(currentItem.options).forEach(opt => {
+                const btn = document.createElement('button');
+                btn.className = "btn-bounce bg-white hover:bg-purple-50 border-2 border-purple-200 text-purple-800 font-bold py-3 md:py-4 px-3 md:px-6 rounded-xl shadow-sm text-sm sm:text-base md:text-lg transition-colors";
+                btn.innerText = opt; btn.onclick = () => { stopTimer(); checkFill(opt, currentItem.blank); };
+                optionsContainer.appendChild(btn);
+            });
+            startTimer();
+        }
+        function checkFill(selected, correct) {
+            const isCorrect = selected === correct;
+            if (isCorrect) gameState.score++; updateScoreDisplay();
+            const sentenceEl = document.getElementById('fill-sentence');
+            if (isCorrect) sentenceEl.innerHTML = sentenceEl.innerHTML.replace('؟', selected).replace('border-dashed', 'border-solid border-green-500 text-green-600');
+            else sentenceEl.innerHTML = sentenceEl.innerHTML.replace('؟', selected).replace('border-dashed', 'border-solid border-red-500 text-red-600 line-through');
+            showFeedback(isCorrect, isCorrect ? "ممتاز! الكلمة في مكانها الصحيح." : `خطأ! الكلمة الصحيحة هي: ${correct}`, () => {
+                gameState.questionIndex++; loadFillQuestion();
+            });
+        }
+
+    </script>
+</body>
+</html>
